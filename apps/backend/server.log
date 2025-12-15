@@ -1,0 +1,5 @@
+nohup: no se tendrá en cuenta la entrada
+[dotenv@17.2.3] injecting env (2) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+🚀 Backend running on http://localhost:4000
+📡 API endpoint: http://localhost:4000/api/hello
+MongoDB Connected to condominium_management
