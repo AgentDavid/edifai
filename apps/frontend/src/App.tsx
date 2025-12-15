@@ -7,10 +7,13 @@ import {
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import LoginPage from "./pages/auth/LoginPage";
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
+import ResellersPage from "./pages/admin/ResellersPage";
+import SettingsPage from "./pages/admin/SettingsPage";
 import ResellerDashboard from "./pages/reseller/ResellerDashboard";
 import CondoAdminDashboard from "./pages/condo/CondoAdminDashboard";
 import UserHome from "./pages/user/UserHome";
 import MainLayout from "./layouts/MainLayout";
+import PlaceholderPage from "./pages/PlaceholderPage";
 
 const Unauthorized = () => (
   <div className="flex items-center justify-center h-screen">
@@ -53,6 +56,22 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/admin/resellers"
+        element={
+          <ProtectedRoute allowedRoles={["super_admin"]}>
+            <ResellersPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/settings"
+        element={
+          <ProtectedRoute allowedRoles={["super_admin"]}>
+            <SettingsPage />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Reseller Routes */}
       <Route
@@ -60,6 +79,28 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={["reseller"]}>
             <ResellerDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/reseller/onboarding"
+        element={
+          <ProtectedRoute allowedRoles={["reseller"]}>
+            <PlaceholderPage
+              title="Altas de Clientes"
+              description="Registra nuevos condominios y administradores."
+            />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/reseller/billing"
+        element={
+          <ProtectedRoute allowedRoles={["reseller"]}>
+            <PlaceholderPage
+              title="Facturación"
+              description="Gestiona tus comisiones y pagos."
+            />
           </ProtectedRoute>
         }
       />
@@ -73,6 +114,50 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/condo/expenses"
+        element={
+          <ProtectedRoute allowedRoles={["admin_condominio"]}>
+            <PlaceholderPage
+              title="Gestión de Gastos"
+              description="Registra facturas y gastos del condominio."
+            />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/condo/residents"
+        element={
+          <ProtectedRoute allowedRoles={["admin_condominio"]}>
+            <PlaceholderPage
+              title="Directorio de Residentes"
+              description="Administra unidades y propietarios."
+            />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/condo/operations"
+        element={
+          <ProtectedRoute allowedRoles={["admin_condominio"]}>
+            <PlaceholderPage
+              title="Operaciones"
+              description="Gestiona tickets de mantenimiento y reservas."
+            />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/condo/settings"
+        element={
+          <ProtectedRoute allowedRoles={["admin_condominio"]}>
+            <PlaceholderPage
+              title="Configuración del Condominio"
+              description="Ajusta preferencias, notificaciones y reglas."
+            />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Condo User Routes */}
       <Route
@@ -80,6 +165,39 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={["usuario_condominio"]}>
             <UserHome />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/user/receipts"
+        element={
+          <ProtectedRoute allowedRoles={["usuario_condominio"]}>
+            <PlaceholderPage
+              title="Mis Recibos"
+              description="Consulta tu historial de pagos y recibos mensuales."
+            />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/user/amenities"
+        element={
+          <ProtectedRoute allowedRoles={["usuario_condominio"]}>
+            <PlaceholderPage
+              title="Reservas"
+              description="Reserva áreas comunes como piscinas o salones."
+            />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/user/tickets"
+        element={
+          <ProtectedRoute allowedRoles={["usuario_condominio"]}>
+            <PlaceholderPage
+              title="Reportes"
+              description="Crea tickets de soporte o mantenimiento."
+            />
           </ProtectedRoute>
         }
       />

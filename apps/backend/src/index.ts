@@ -5,6 +5,7 @@ import { connectDB } from "./config/database";
 import authRoutes from "./routes/auth.routes";
 import condoRoutes from "./routes/condo.routes";
 import ticketRoutes from "./routes/ticket.routes";
+import userRoutes from "./routes/user.routes";
 
 dotenv.config();
 
@@ -22,8 +23,9 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/condo", condoRoutes);
 app.use("/api/tickets", ticketRoutes);
+app.use("/api/users", userRoutes);
 
-// Routes
+// Basic Routes
 app.get("/api/hello", (req: Request, res: Response) => {
   res.json({
     message: "¡Hola desde el backend!",
