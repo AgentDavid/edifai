@@ -1,15 +1,7 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
+import { Unit } from "@repo/shared-types";
 
-export interface IUnit extends Document {
-  condominium_id: Types.ObjectId;
-  unit_number: string;
-  owner_id: Types.ObjectId;
-  specs: {
-    area_m2: number;
-    aliquot_percentage: number;
-  };
-  current_balance: number;
-}
+export interface IUnit extends Unit<Types.ObjectId>, Document {}
 
 const UnitSchema: Schema = new Schema({
   condominium_id: {

@@ -1,18 +1,49 @@
-export interface ApiResponse {
-  message: string;
-  timestamp: string;
-  status: string;
-}
+import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 
-export const fetchHello = async (): Promise<ApiResponse> => {
-  try {
-    const response = await fetch("http://localhost:4000/api/hello");
-    if (!response.ok) {
-      throw new Error("Network response was not ok");
+const API_URL = "http://localhost:4000/api";
+
+export const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+// Request Interceptor: Inject Token
+api.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching data:", error);
-    throw error;
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-};
+);
+
+// Response Interceptor: Handle Errors
+api.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    if (error.response) {
+      const { status, data } = error.response;
+
+      if (status === 401) {
+        // Unauthorized - Clear auth and redirect
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "/auth/login";
+      } else if (status === 403) {
+        // Forbidden - SaaS Suspension or Access Denied
+        // Dispatch a custom event for the UI to show a modal
+        const event = new CustomEvent("api:forbidden", { detail: data });
+        window.dispatchEvent(event);
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default api;

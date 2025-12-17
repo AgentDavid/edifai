@@ -11,8 +11,17 @@ import {
   FileText,
   PenTool,
   LogOut,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "../lib/utils";
+
+// ... (keep interface and item arrays as they are) ...
+// Note: I cannot see the item arrays in the 'old_string' unless I include them.
+// To be safe, I will target the imports and then the component body separately or in one large block if I'm confident.
+// Better to split replacements.
+
+// Replacement 1: Imports
+
 
 interface SidebarItem {
   label: string;
@@ -48,7 +57,7 @@ const UserItems: SidebarItem[] = [
 ];
 
 const MainLayout = ({ children }: { children: React.ReactNode }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, isSaaSSuspended } = useAuth();
   const [isOpen, setIsOpen] = useState(true);
   const location = useLocation();
 
@@ -174,6 +183,15 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-50">
+        {isSaaSSuspended && (
+          <div className="bg-red-600 text-white px-4 py-2 text-sm text-center font-medium flex items-center justify-center gap-2">
+            <AlertTriangle size={16} />
+            <span>
+              Su suscripción está suspendida o vencida. Algunas funciones pueden
+              estar limitadas.
+            </span>
+          </div>
+        )}
         <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 z-10 sticky top-0">
           <div className="flex items-center gap-4">
             <button

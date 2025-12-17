@@ -1,18 +1,7 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
+import { Receipt } from "@repo/shared-types";
 
-export interface IReceipt extends Document {
-  unit_id: Types.ObjectId;
-  condominium_id: Types.ObjectId;
-  billing_period: string;
-  total_amount: number;
-  status: "PENDING" | "PAID" | "OVERDUE";
-  breakdown: {
-    description: string;
-    amount: number;
-  }[];
-  issued_date: Date;
-  due_date: Date;
-}
+export interface IReceipt extends Receipt<Types.ObjectId>, Document {}
 
 const ReceiptSchema: Schema = new Schema({
   unit_id: { type: Schema.Types.ObjectId, ref: "Unit", required: true },

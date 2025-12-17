@@ -1,14 +1,7 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, Types } from "mongoose";
+import { Subscription } from "@repo/shared-types";
 
-export interface ISubscription extends Document {
-  condominium_id: mongoose.Types.ObjectId;
-  plan_id: mongoose.Types.ObjectId;
-  start_date: Date;
-  next_billing_date: Date;
-  status: "active" | "past_due" | "canceled";
-  billing_cycle: "monthly" | "annual";
-  payment_method_token?: string;
-}
+export interface ISubscription extends Subscription<Types.ObjectId>, Document {}
 
 const SubscriptionSchema: Schema = new Schema({
   condominium_id: { type: Schema.Types.ObjectId, ref: "Condominium", required: true },

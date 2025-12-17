@@ -7,6 +7,7 @@ import {
 } from "../controllers/condoController";
 import { authenticate } from "../middleware/authMiddleware";
 import { authorize } from "../middleware/roleMiddleware";
+import { validateTenantStatus } from "../middleware/saasMiddleware";
 
 const router = Router();
 
@@ -16,6 +17,7 @@ router.post(
   "/expenses",
   authenticate,
   authorize(["admin_condominio", "super_admin"]),
+  validateTenantStatus,
   createExpense
 );
 router.get("/:condominium_id/expenses", authenticate, getExpenses);
@@ -25,6 +27,7 @@ router.post(
   "/calculate-fees",
   authenticate,
   authorize(["admin_condominio", "super_admin"]),
+  validateTenantStatus,
   calculateMonthlyFees
 );
 

@@ -1,21 +1,7 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
+import { Ticket } from "@repo/shared-types";
 
-export interface ITicket extends Document {
-  condominium_id: Types.ObjectId;
-  user_id: Types.ObjectId;
-  type: "MAINTENANCE_REPORT" | "AMENITY_RESERVATION";
-  details: {
-    description?: string;
-    amenity?: string;
-    reservation_date?: Date;
-  };
-  status: "OPEN" | "APPROVED" | "REJECTED" | "COMPLETED";
-  ai_interaction_log: {
-    role: "user" | "bot";
-    msg: string;
-    timestamp?: Date;
-  }[];
-}
+export interface ITicket extends Ticket<Types.ObjectId>, Document {}
 
 const TicketSchema: Schema = new Schema(
   {

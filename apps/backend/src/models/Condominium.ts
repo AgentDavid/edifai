@@ -1,30 +1,7 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
+import { Condominium } from "@repo/shared-types";
 
-export interface ICondominium extends Document {
-  name: string;
-  address: string;
-  admin_id: Types.ObjectId;
-  reseller_id?: Types.ObjectId;
-  settings: {
-    calculation_method: "m2" | "equitativo";
-    currency: string;
-    notifications: {
-      enabled: boolean;
-      whatsapp_provider?: string;
-      whatsapp_instance_id?: string;
-      ai_chatbot_enabled: boolean;
-    };
-    communication_channels: {
-      whatsapp_enabled: boolean;
-      email_enabled: boolean;
-    };
-    ai_config: {
-      base_prompt: string;
-      knowledge_base: string;
-    };
-  };
-  amenities: string[];
-}
+export interface ICondominium extends Condominium<Types.ObjectId>, Document {}
 
 const CondominiumSchema: Schema = new Schema({
   name: { type: String, required: true },

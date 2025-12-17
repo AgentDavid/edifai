@@ -1,20 +1,7 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, Types } from "mongoose";
+import { User } from "@repo/shared-types";
 
-export interface IUser extends Document {
-  email: string;
-  password_hash: string;
-  role: "super_admin" | "reseller" | "admin_condominio" | "usuario_condominio";
-  profile: {
-    first_name: string;
-    last_name: string;
-    phone: string;
-  };
-  preferences: {
-    notifications_channel: "WHATSAPP" | "EMAIL" | "BOTH";
-  };
-  status: "active" | "inactive" | "blocked";
-  created_at: Date;
-}
+export interface IUser extends User<Types.ObjectId>, Document {}
 
 const UserSchema: Schema = new Schema({
   email: { type: String, required: true, unique: true },

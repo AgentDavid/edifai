@@ -1,13 +1,7 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, Types } from "mongoose";
+import { SaaSInvoice } from "@repo/shared-types";
 
-export interface ISaaSInvoice extends Document {
-  subscription_id: mongoose.Types.ObjectId;
-  condominium_id: mongoose.Types.ObjectId;
-  amount: number;
-  issue_date: Date;
-  status: "paid" | "pending";
-  pdf_url?: string;
-}
+export interface ISaaSInvoice extends SaaSInvoice<Types.ObjectId>, Document {}
 
 const SaaSInvoiceSchema: Schema = new Schema({
   subscription_id: { type: Schema.Types.ObjectId, ref: "Subscription", required: true },

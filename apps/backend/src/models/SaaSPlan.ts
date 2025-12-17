@@ -1,13 +1,7 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, Types } from "mongoose";
+import { SaaSPlan } from "@repo/shared-types";
 
-export interface ISaaSPlan extends Document {
-  name: string;
-  code: string;
-  max_units: number;
-  monthly_price: number;
-  currency: string;
-  features: string[];
-}
+export interface ISaaSPlan extends SaaSPlan<Types.ObjectId>, Document {}
 
 const SaaSPlanSchema: Schema = new Schema({
   name: { type: String, required: true },

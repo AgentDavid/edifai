@@ -14,6 +14,7 @@ import CondoAdminDashboard from "./pages/condo/CondoAdminDashboard";
 import UserHome from "./pages/user/UserHome";
 import MainLayout from "./layouts/MainLayout";
 import PlaceholderPage from "./pages/PlaceholderPage";
+import { useEffect } from "react";
 
 const Unauthorized = () => (
   <div className="flex items-center justify-center h-screen">
@@ -42,9 +43,49 @@ const ProtectedRoute = ({
 };
 
 function AppRoutes() {
+  const { isAuthenticated, user } = useAuth();
+
+  useEffect(() => {
+    const handleForbidden = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      // You might want to replace this with a nicer modal
+      alert(
+        `Acceso Denegado: ${
+          detail?.message || "Permisos insuficientes o pago requerido."
+        }`
+      );
+    };
+    window.addEventListener("api:forbidden", handleForbidden);
+    return () => window.removeEventListener("api:forbidden", handleForbidden);
+  }, []);
+
+  const getDashboardPath = (role: string) => {
+    switch (role) {
+      case "super_admin":
+        return "/admin/dashboard";
+      case "reseller":
+        return "/reseller/dashboard";
+      case "admin_condominio":
+        return "/condo/dashboard";
+      case "usuario_condominio":
+        return "/user/home";
+      default:
+        return "/unauthorized";
+    }
+  };
+
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/login"
+        element={
+          isAuthenticated && user ? (
+            <Navigate to={getDashboardPath(user.role)} />
+          ) : (
+            <LoginPage />
+          )
+        }
+      />
       <Route path="/unauthorized" element={<Unauthorized />} />
 
       {/* Super Admin Routes */}

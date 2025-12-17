@@ -1,22 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import axios from "axios";
-
-interface User {
-  id: string;
-  email: string;
-  role: "super_admin" | "reseller" | "admin_condominio" | "usuario_condominio";
-  profile: {
-    first_name: string;
-    last_name: string;
-  };
-}
+import type { User } from "@repo/shared-types";
+import { api } from "../services/api";
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (token: string, user: User) => void;
+  login: (token: string, user: User, subscriptionStatus?: string) => void;
   logout: () => void;
   isAuthenticated: boolean;
+  isSaaSSuspended: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,40 +20,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [token, setToken] = useState<string | null>(
     localStorage.getItem("token")
   );
+  const [isSaaSSuspended, setIsSaaSSuspended] = useState<boolean>(false);
 
   useEffect(() => {
     if (token) {
-      // In a real app, verify token with backend or decode JWT to get expiration
-      // For now, we trust the local storage if it exists or wait for a failed request to clear it
-      // We can also decode specific user info from the token if needed
-
-      // Attempt to restore user from localStorage if we saved it
+      // Restore user from localStorage
       const savedUser = localStorage.getItem("user");
+      const savedSubStatus = localStorage.getItem("subscription_status");
+      
       if (savedUser) {
         setUser(JSON.parse(savedUser));
       }
+      
+      if (savedSubStatus && savedSubStatus !== "active") {
+        setIsSaaSSuspended(true);
+      }
+      
+      // Set default header
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     }
   }, [token]);
 
-  const login = (newToken: string, newUser: User) => {
+  const login = (newToken: string, newUser: User, subscriptionStatus: string = "active") => {
     setToken(newToken);
     setUser(newUser);
+    
+    const suspended = subscriptionStatus !== "active";
+    setIsSaaSSuspended(suspended);
+
     localStorage.setItem("token", newToken);
     localStorage.setItem("user", JSON.stringify(newUser));
-    axios.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
+    localStorage.setItem("subscription_status", subscriptionStatus);
+    
+    api.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
   };
 
   const logout = () => {
     setToken(null);
     setUser(null);
+    setIsSaaSSuspended(false);
+    
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    delete axios.defaults.headers.common["Authorization"];
+    localStorage.removeItem("subscription_status");
+    
+    delete api.defaults.headers.common["Authorization"];
   };
 
   return (
     <AuthContext.Provider
-      value={{ user, token, login, logout, isAuthenticated: !!token }}
+      value={{ user, token, login, logout, isAuthenticated: !!token, isSaaSSuspended }}
     >
       {children}
     </AuthContext.Provider>

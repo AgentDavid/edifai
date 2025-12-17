@@ -1,15 +1,7 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
+import { Expense } from "@repo/shared-types";
 
-export interface IExpense extends Document {
-  condominium_id: Types.ObjectId;
-  type: "FIXED" | "VARIABLE" | "RESERVE";
-  category: string;
-  description: string;
-  amount: number;
-  date: Date;
-  invoice_url?: string;
-  status: "active" | "voided";
-}
+export interface IExpense extends Expense<Types.ObjectId>, Document {}
 
 const ExpenseSchema: Schema = new Schema({
   condominium_id: {
