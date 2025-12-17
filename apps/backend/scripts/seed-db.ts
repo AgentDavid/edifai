@@ -8,6 +8,8 @@ import Unit from "../src/models/Unit";
 import Expense from "../src/models/Expense";
 import Receipt from "../src/models/Receipt";
 import Ticket from "../src/models/Ticket";
+import SaaSPlan from "../src/models/SaaSPlan";
+import Subscription from "../src/models/Subscription";
 
 dotenv.config();
 
@@ -15,6 +17,27 @@ const seedDB = async () => {
   try {
     await connectDB();
     console.log("Seeding database...");
+
+    // 0. Create SaaS Plans
+    const basicPlan = await SaaSPlan.create({
+      name: "Plan Básico",
+      code: "BASIC_50",
+      max_units: 50,
+      monthly_price: 25.00,
+      currency: "USD",
+      features: ["expenses", "receipts", "basic_support"]
+    });
+
+    const proPlan = await SaaSPlan.create({
+      name: "Plan Pro",
+      code: "PRO_100",
+      max_units: 100,
+      monthly_price: 50.00,
+      currency: "USD",
+      features: ["expenses", "receipts", "ai_chatbot", "whatsapp_notifications"]
+    });
+
+    console.log("SaaS Plans created");
 
     // 1. Create Users
     const hashedPassword = await argon2.hash("password123");
@@ -93,6 +116,18 @@ const seedDB = async () => {
     });
 
     console.log("Condominium created");
+
+    // 2.1 Create Subscription for Condominium
+    await Subscription.create({
+      condominium_id: condo._id,
+      plan_id: basicPlan._id,
+      start_date: new Date(),
+      next_billing_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      status: "active",
+      billing_cycle: "monthly"
+    });
+
+    console.log("Subscription created");
 
     // 3. Create Unit
     const unit = await Unit.create({
