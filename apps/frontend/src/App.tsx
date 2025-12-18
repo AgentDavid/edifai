@@ -16,6 +16,8 @@ import UserHome from "./pages/user/UserHome";
 import MainLayout from "./layouts/MainLayout";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import { useEffect } from "react";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const Unauthorized = () => (
   <div className="flex items-center justify-center h-screen">
@@ -49,8 +51,7 @@ function AppRoutes() {
   useEffect(() => {
     const handleForbidden = (event: Event) => {
       const detail = (event as CustomEvent).detail;
-      // You might want to replace this with a nicer modal
-      alert(
+      toast.error(
         `Acceso Denegado: ${
           detail?.message || "Permisos insuficientes o pago requerido."
         }`
@@ -263,6 +264,18 @@ function App() {
     <AuthProvider>
       <Router>
         <AppRoutes />
+        <ToastContainer
+          position="top-right"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+        />
       </Router>
     </AuthProvider>
   );

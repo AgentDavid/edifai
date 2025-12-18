@@ -38,6 +38,7 @@ const seedDB = async () => {
       monthly_price: 25.0,
       currency: "USD",
       features: ["expenses", "receipts", "basic_support"],
+      ai_features_enabled: false,
     });
 
     const proPlan = await SaaSPlan.create({
@@ -52,6 +53,7 @@ const seedDB = async () => {
         "ai_chatbot",
         "whatsapp_notifications",
       ],
+      ai_features_enabled: true,
     });
 
     console.log("SaaS Plans created");

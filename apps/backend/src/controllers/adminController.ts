@@ -257,3 +257,99 @@ export const getPlans = async (_req: Request, res: Response) => {
     res.status(500).json({ message: "Error al obtener planes", error });
   }
 };
+
+const planSchema = z.object({
+  name: z.string().min(1, "Nombre requerido"),
+  code: z.string().min(1, "Código requerido"),
+  monthly_price: z.number().min(0, "Precio debe ser mayor o igual a 0"),
+  max_units: z.number().min(1, "Máximo de unidades debe ser mayor a 0"),
+  currency: z.string().default("USD"),
+  features: z.array(z.string()).default([]),
+  ai_features_enabled: z.boolean().default(false),
+});
+
+/**
+ * POST /api/admin/plans
+ * Create a new SaaS plan
+ */
+export const createPlan = async (req: Request, res: Response) => {
+  try {
+    const parsed = planSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Datos inválidos",
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    const plan = await SaaSPlan.create(parsed.data);
+    res.status(201).json({ message: "Plan creado", data: plan });
+  } catch (error) {
+    console.error("Create Plan Error:", error);
+    res.status(500).json({ message: "Error al crear plan", error });
+  }
+};
+
+/**
+ * PUT /api/admin/plans/:id
+ * Update an existing SaaS plan
+ */
+export const updatePlan = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const parsed = planSchema.partial().safeParse(req.body);
+
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Datos inválidos",
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    const plan = await SaaSPlan.findByIdAndUpdate(id, parsed.data, {
+      new: true,
+    });
+
+    if (!plan) {
+      return res.status(404).json({ message: "Plan no encontrado" });
+    }
+
+    res.json({ message: "Plan actualizado", data: plan });
+  } catch (error) {
+    console.error("Update Plan Error:", error);
+    res.status(500).json({ message: "Error al actualizar plan", error });
+  }
+};
+
+/**
+ * DELETE /api/admin/plans/:id
+ * Delete a SaaS plan
+ */
+export const deletePlan = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Check if plan is used by any subscription
+    const subscriptionCount = await Subscription.countDocuments({
+      plan_id: id,
+      status: "active",
+    });
+
+    if (subscriptionCount > 0) {
+      return res.status(400).json({
+        message:
+          "No se puede eliminar el plan porque hay suscripciones activas",
+      });
+    }
+
+    const plan = await SaaSPlan.findByIdAndDelete(id);
+    if (!plan) {
+      return res.status(404).json({ message: "Plan no encontrado" });
+    }
+
+    res.json({ message: "Plan eliminado" });
+  } catch (error) {
+    console.error("Delete Plan Error:", error);
+    res.status(500).json({ message: "Error al eliminar plan", error });
+  }
+};

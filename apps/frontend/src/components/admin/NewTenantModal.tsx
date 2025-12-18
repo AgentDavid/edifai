@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
+import { toast } from "react-toastify";
 import api from "../../services/api";
 
 interface Plan {
@@ -75,6 +76,7 @@ const NewTenantModal = ({
         adminPhone: "",
         planId: plans[0]?._id || "",
       });
+      toast.success("Condominio creado exitosamente");
       onSuccess();
     } catch (err: unknown) {
       const axiosError = err as { response?: { data?: { message?: string } } };

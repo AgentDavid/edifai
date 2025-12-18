@@ -10,6 +10,7 @@ const SaaSPlanSchema: Schema = new Schema({
   monthly_price: { type: Number, required: true },
   currency: { type: String, default: "USD" },
   features: [{ type: String }],
+  ai_features_enabled: { type: Boolean, default: false },
 });
 
 export default mongoose.model<ISaaSPlan>("SaaSPlan", SaaSPlanSchema);

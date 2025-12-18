@@ -116,6 +116,7 @@ export interface SaaSPlan<IdType = string> {
   monthly_price: number;
   currency: string;
   features: string[];
+  ai_features_enabled?: boolean;
 }
 
 export interface Subscription<IdType = string> {

@@ -5,6 +5,9 @@ import {
   provisionTenant,
   getTenants,
   getPlans,
+  createPlan,
+  updatePlan,
+  deletePlan,
 } from "../controllers/adminController";
 
 const router = Router();
@@ -20,6 +23,12 @@ router.post("/provision-tenant", provisionTenant);
 router.get("/tenants", getTenants);
 
 // List all plans (for dropdown)
+// List all plans (for dropdown)
 router.get("/plans", getPlans);
+
+// Manage plans
+router.post("/plans", createPlan);
+router.put("/plans/:id", updatePlan);
+router.delete("/plans/:id", deletePlan);
 
 export default router;
