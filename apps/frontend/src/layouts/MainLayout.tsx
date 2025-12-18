@@ -12,6 +12,7 @@ import {
   PenTool,
   LogOut,
   AlertTriangle,
+  Building,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 
@@ -22,7 +23,6 @@ import { cn } from "../lib/utils";
 
 // Replacement 1: Imports
 
-
 interface SidebarItem {
   label: string;
   icon: React.ElementType;
@@ -31,6 +31,7 @@ interface SidebarItem {
 
 const SuperAdminItems: SidebarItem[] = [
   { label: "Dashboard", icon: Home, href: "/admin/dashboard" },
+  { label: "Condominios", icon: Building, href: "/admin/tenants" },
   { label: "Revendedores", icon: Users, href: "/admin/resellers" },
   { label: "Configuración", icon: Settings, href: "/admin/settings" },
 ];

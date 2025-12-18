@@ -9,6 +9,7 @@ import LoginPage from "./pages/auth/LoginPage";
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
 import ResellersPage from "./pages/admin/ResellersPage";
 import SettingsPage from "./pages/admin/SettingsPage";
+import TenantsPage from "./pages/admin/TenantsPage";
 import ResellerDashboard from "./pages/reseller/ResellerDashboard";
 import CondoAdminDashboard from "./pages/condo/CondoAdminDashboard";
 import UserHome from "./pages/user/UserHome";
@@ -110,6 +111,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={["super_admin"]}>
             <SettingsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/tenants"
+        element={
+          <ProtectedRoute allowedRoles={["super_admin"]}>
+            <TenantsPage />
           </ProtectedRoute>
         }
       />

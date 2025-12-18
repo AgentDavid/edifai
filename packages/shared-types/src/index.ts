@@ -1,4 +1,8 @@
-export type UserRole = "super_admin" | "reseller" | "admin_condominio" | "usuario_condominio";
+export type UserRole =
+  | "super_admin"
+  | "reseller"
+  | "admin_condominio"
+  | "usuario_condominio";
 
 export interface User<IdType = string> {
   _id: IdType;
@@ -14,6 +18,7 @@ export interface User<IdType = string> {
     notifications_channel: "WHATSAPP" | "EMAIL" | "BOTH";
   };
   status: "active" | "inactive" | "blocked";
+  condominium_id?: IdType;
   created_at: Date | string;
 }
 

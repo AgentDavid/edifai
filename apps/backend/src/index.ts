@@ -6,6 +6,7 @@ import authRoutes from "./routes/auth.routes";
 import condoRoutes from "./routes/condo.routes";
 import ticketRoutes from "./routes/ticket.routes";
 import userRoutes from "./routes/user.routes";
+import adminRoutes from "./routes/admin.routes";
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/condo", condoRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/admin", adminRoutes);
 
 // Basic Routes
 app.get("/api/hello", (req: Request, res: Response) => {

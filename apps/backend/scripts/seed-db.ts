@@ -16,25 +16,42 @@ dotenv.config();
 const seedDB = async () => {
   try {
     await connectDB();
+    // 0. Clean Database
+    const collections = await mongoose.connection.db
+      ?.listCollections()
+      .toArray();
+    if (collections) {
+      for (const collection of collections) {
+        await mongoose.connection.db?.dropCollection(collection.name);
+        console.log(`   Dropped: ${collection.name}`);
+      }
+    }
+    console.log("🗑️  All collections dropped");
+
     console.log("Seeding database...");
 
-    // 0. Create SaaS Plans
+    // 1. Create SaaS Plans
     const basicPlan = await SaaSPlan.create({
       name: "Plan Básico",
       code: "BASIC_50",
       max_units: 50,
-      monthly_price: 25.00,
+      monthly_price: 25.0,
       currency: "USD",
-      features: ["expenses", "receipts", "basic_support"]
+      features: ["expenses", "receipts", "basic_support"],
     });
 
     const proPlan = await SaaSPlan.create({
       name: "Plan Pro",
       code: "PRO_100",
       max_units: 100,
-      monthly_price: 50.00,
+      monthly_price: 50.0,
       currency: "USD",
-      features: ["expenses", "receipts", "ai_chatbot", "whatsapp_notifications"]
+      features: [
+        "expenses",
+        "receipts",
+        "ai_chatbot",
+        "whatsapp_notifications",
+      ],
     });
 
     console.log("SaaS Plans created");
@@ -124,7 +141,7 @@ const seedDB = async () => {
       start_date: new Date(),
       next_billing_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       status: "active",
-      billing_cycle: "monthly"
+      billing_cycle: "monthly",
     });
 
     console.log("Subscription created");

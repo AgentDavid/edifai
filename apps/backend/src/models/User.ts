@@ -28,6 +28,7 @@ const UserSchema: Schema = new Schema({
     enum: ["active", "inactive", "blocked"],
     default: "active",
   },
+  condominium_id: { type: Schema.Types.ObjectId, ref: "Condominium" },
   created_at: { type: Date, default: Date.now },
 });
 
