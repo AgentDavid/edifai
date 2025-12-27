@@ -8,6 +8,10 @@ import {
   createPlan,
   updatePlan,
   deletePlan,
+  getDashboardStats,
+  getSystemAlerts,
+  markAlertAttended,
+  markAllAlertsAttended,
 } from "../controllers/adminController";
 
 const router = Router();
@@ -15,6 +19,14 @@ const router = Router();
 // All routes require super_admin role
 router.use(authenticate);
 router.use(authorize(["super_admin"]));
+
+// Stats
+router.get("/stats", getDashboardStats);
+
+// Alerts (System Errors)
+router.get("/alerts", getSystemAlerts);
+router.patch("/alerts/:id/attend", markAlertAttended);
+router.post("/alerts/attend-all", markAllAlertsAttended);
 
 // Tenant provisioning
 router.post("/provision-tenant", provisionTenant);

@@ -10,6 +10,7 @@ import Subscription from "../models/Subscription";
 import Expense from "../models/Expense";
 import Unit from "../models/Unit";
 import Receipt from "../models/Receipt";
+import SystemError from "../models/SystemError";
 import { sendWelcomeEmail } from "../services/emailService";
 
 // Validation schemas
@@ -724,5 +725,136 @@ export const deleteSuperAdmin = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Delete SuperAdmin Error:", error);
     res.status(500).json({ message: "Error al eliminar superadmin", error });
+  }
+};
+
+/**
+ * GET /api/admin/stats
+ * Get dashboard statistics for superadmin
+ */
+export const getDashboardStats = async (req: Request, res: Response) => {
+  try {
+    // 1. Total Tenants (Active Condominiums)
+    const totalTenants = await Condominium.countDocuments();
+
+    // 2. Monthly Revenue
+    // Sum of monthly_price of plan for all active subscriptions
+    const activeSubscriptions = await Subscription.find({
+      status: "active",
+    }).populate("plan_id");
+
+    const monthlyRevenue = activeSubscriptions.reduce((sum, sub) => {
+      // Check if plan_id is populated and has monthly_price
+      const plan = sub.plan_id as any; // Cast to any or appropriate interface if available
+      if (plan && typeof plan.monthly_price === "number") {
+        return sum + plan.monthly_price;
+      }
+      return sum;
+    }, 0);
+
+    // 3. Total Resellers
+    const totalResellers = await User.countDocuments({ role: "reseller" });
+
+    // 4. Active Alerts (System Errors)
+    const activeAlerts = await SystemError.countDocuments({ status: "OPEN" });
+
+    res.json({
+      data: {
+        totalTenants,
+        monthlyRevenue,
+        totalResellers,
+        activeAlerts,
+      },
+    });
+  } catch (error) {
+    console.error("Get Dashboard Stats Error:", error);
+    res.status(500).json({ message: "Error al obtener estadísticas", error });
+  }
+};
+
+/**
+ * GET /api/admin/alerts
+ * List system alerts
+ */
+export const getSystemAlerts = async (req: Request, res: Response) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const skip = (page - 1) * limit;
+
+    const alerts = await SystemError.find()
+      .populate("attended_by", "email profile")
+      .sort({ created_at: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await SystemError.countDocuments();
+
+    res.json({
+      data: alerts,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error("Get Alerts Error:", error);
+    res.status(500).json({ message: "Error al obtener alertas", error });
+  }
+};
+
+/**
+ * PATCH /api/admin/alerts/:id/attend
+ * Mark an alert as attended
+ */
+export const markAlertAttended = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).user?.userId;
+
+    const alert = await SystemError.findByIdAndUpdate(
+      id,
+      {
+        status: "ATTENDED",
+        attended_by: userId,
+        attended_at: new Date(),
+      },
+      { new: true }
+    );
+
+    if (!alert) {
+      return res.status(404).json({ message: "Alerta no encontrada" });
+    }
+
+    res.json({ message: "Alerta marcada como atendida", data: alert });
+  } catch (error) {
+    console.error("Mark Alert Attended Error:", error);
+    res.status(500).json({ message: "Error al actualizar alerta", error });
+  }
+};
+
+/**
+ * POST /api/admin/alerts/attend-all
+ * Mark all open alerts as attended
+ */
+export const markAllAlertsAttended = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.userId;
+
+    await SystemError.updateMany(
+      { status: "OPEN" },
+      {
+        status: "ATTENDED",
+        attended_by: userId,
+        attended_at: new Date(),
+      }
+    );
+
+    res.json({ message: "Todas las alertas marcadas como atendidas" });
+  } catch (error) {
+    console.error("Mark All Alerts Attended Error:", error);
+    res.status(500).json({ message: "Error al actualizar alertas", error });
   }
 };

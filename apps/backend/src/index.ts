@@ -7,6 +7,7 @@ import condoRoutes from "./routes/condo.routes";
 import ticketRoutes from "./routes/ticket.routes";
 import userRoutes from "./routes/user.routes";
 import adminRoutes from "./routes/admin.routes";
+import { errorLogger } from "./middleware/errorLogger";
 
 dotenv.config();
 
@@ -26,6 +27,9 @@ app.use("/api/condo", condoRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/admin", adminRoutes);
+
+// Error Logger
+app.use(errorLogger);
 
 // Basic Routes
 app.get("/api/hello", (req: Request, res: Response) => {
