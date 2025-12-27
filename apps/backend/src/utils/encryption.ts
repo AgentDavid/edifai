@@ -1,3 +1,4 @@
+import * as crypto from "crypto";
 import { env } from "../config/env";
 
 // Use a 32-byte key for AES-256
@@ -26,7 +27,9 @@ export const decrypt = (text: string): string => {
     throw new Error("Invalid encrypted text format");
   }
 
-  const [ivHex, authTagHex, encryptedHex] = parts;
+  const ivHex = parts[0] as string;
+  const authTagHex = parts[1] as string;
+  const encryptedHex = parts[2] as string;
 
   const iv = Buffer.from(ivHex, "hex");
   const authTag = Buffer.from(authTagHex, "hex");
