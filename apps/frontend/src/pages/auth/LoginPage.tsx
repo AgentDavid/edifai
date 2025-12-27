@@ -43,7 +43,7 @@ const LoginPage = () => {
         default:
           navigate("/");
       }
-    } catch (err: any) {
+    } catch {
       setError("Credenciales inválidas. Por favor intenta de nuevo.");
     } finally {
       setLoading(false);

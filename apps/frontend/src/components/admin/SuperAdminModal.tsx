@@ -2,11 +2,21 @@ import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { X } from "lucide-react";
 
+interface SuperAdminData {
+  _id?: string;
+  email: string;
+  profile?: {
+    first_name: string;
+    last_name: string;
+    phone: string;
+  };
+}
+
 interface SuperAdminModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (data: any) => void;
-  superAdmin?: any;
+  onSuccess: (data: unknown) => void;
+  superAdmin?: SuperAdminData;
   isProcessing?: boolean;
 }
 
@@ -53,7 +63,7 @@ const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
     }
   }, [isOpen, superAdmin, setValue, reset]);
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: unknown) => {
     onSuccess(data);
   };
 

@@ -33,7 +33,6 @@ api.interceptors.response.use(
       if (status === 401) {
         // Unauthorized - Clear auth and redirect
         localStorage.removeItem("token");
-        localStorage.removeItem("user");
         window.location.href = "/auth/login";
       } else if (status === 403) {
         // Forbidden - SaaS Suspension or Access Denied

@@ -22,60 +22,73 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   );
   const [isSaaSSuspended, setIsSaaSSuspended] = useState<boolean>(false);
 
-  useEffect(() => {
-    if (token) {
-      // Restore user from localStorage
-      const savedUser = localStorage.getItem("user");
-      const savedSubStatus = localStorage.getItem("subscription_status");
-      
-      if (savedUser) {
-        setUser(JSON.parse(savedUser));
-      }
-      
-      if (savedSubStatus && savedSubStatus !== "active") {
-        setIsSaaSSuspended(true);
-      }
-      
-      // Set default header
-      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    }
-  }, [token]);
-
-  const login = (newToken: string, newUser: User, subscriptionStatus: string = "active") => {
-    setToken(newToken);
-    setUser(newUser);
-    
-    const suspended = subscriptionStatus !== "active";
-    setIsSaaSSuspended(suspended);
-
-    localStorage.setItem("token", newToken);
-    localStorage.setItem("user", JSON.stringify(newUser));
-    localStorage.setItem("subscription_status", subscriptionStatus);
-    
-    api.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
-  };
-
-  const logout = () => {
+  const logout = React.useCallback(() => {
     setToken(null);
     setUser(null);
     setIsSaaSSuspended(false);
-    
+
     localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("subscription_status");
-    
+
     delete api.defaults.headers.common["Authorization"];
-  };
+  }, []);
+
+  const login = React.useCallback(
+    (
+      newToken: string,
+      newUser: User,
+      subscriptionStatus: string = "active"
+    ) => {
+      setToken(newToken);
+      setUser(newUser);
+
+      const suspended = subscriptionStatus !== "active";
+      setIsSaaSSuspended(suspended);
+
+      localStorage.setItem("token", newToken);
+
+      api.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (token) {
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+
+      // Fetch user profile if not loaded (e.g. page refresh)
+      if (!user) {
+        api
+          .get("/auth/me")
+          .then((response) => {
+            const { user: fetchedUser, subscription_status } = response.data;
+            setUser(fetchedUser);
+            setIsSaaSSuspended(subscription_status !== "active");
+          })
+          .catch((err) => {
+            console.error("Failed to restore session", err);
+            logout();
+          });
+      }
+    }
+  }, [token, user, logout]);
 
   return (
     <AuthContext.Provider
-      value={{ user, token, login, logout, isAuthenticated: !!token, isSaaSSuspended }}
+      value={{
+        user,
+        token,
+        login,
+        logout,
+        isAuthenticated: !!token,
+        isSaaSSuspended,
+      }}
     >
       {children}
     </AuthContext.Provider>
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

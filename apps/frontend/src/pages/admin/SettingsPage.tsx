@@ -142,7 +142,7 @@ const SettingsPage = () => {
     setIsAdminDeleteOpen(true);
   };
 
-  const handleAdminSuccess = async (data: any) => {
+  const handleAdminSuccess = async (data: unknown) => {
     try {
       setIsProcessingAdmin(true);
       if (selectedAdmin) {

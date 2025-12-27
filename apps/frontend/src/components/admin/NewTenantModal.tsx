@@ -36,22 +36,25 @@ const NewTenantModal = ({
   });
 
   useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const response = await api.get<{ data: Plan[] }>("/admin/plans");
+        setPlans(response.data.data);
+        if (response.data.data.length > 0 && !formData.planId) {
+          setFormData((prev) => ({
+            ...prev,
+            planId: response.data.data[0]._id,
+          }));
+        }
+      } catch (err) {
+        console.error("Error fetching plans:", err);
+      }
+    };
+
     if (isOpen) {
       fetchPlans();
     }
-  }, [isOpen]);
-
-  const fetchPlans = async () => {
-    try {
-      const response = await api.get<{ data: Plan[] }>("/admin/plans");
-      setPlans(response.data.data);
-      if (response.data.data.length > 0 && !formData.planId) {
-        setFormData((prev) => ({ ...prev, planId: response.data.data[0]._id }));
-      }
-    } catch (err) {
-      console.error("Error fetching plans:", err);
-    }
-  };
+  }, [isOpen, formData.planId]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>

@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { decrypt } from "../utils/encryption";
+import { env } from "../config/env";
 
 export interface AuthRequest extends Request {
   user?: {
@@ -24,8 +26,9 @@ export const authenticate = (
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "secret_key"); // Backup secret for dev
-    req.user = decoded as any;
+    const decoded = jwt.verify(token, env.JWT_SECRET) as { data: string };
+    const decryptedPayload = decrypt(decoded.data);
+    req.user = JSON.parse(decryptedPayload);
     next();
   } catch (error) {
     res.status(400).json({ message: "Invalid token." });
