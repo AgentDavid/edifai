@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { toast } from "react-toastify";
 import api from "../../services/api";
+import CustomSelect from "../../components/ui/CustomSelect";
 
 interface Plan {
   _id: string;
@@ -57,17 +58,12 @@ const NewTenantModal = ({
     planId: "",
   });
 
+  // Fetch plans only when modal opens
   useEffect(() => {
     const fetchPlans = async () => {
       try {
         const response = await api.get<{ data: Plan[] }>("/admin/plans");
         setPlans(response.data.data);
-        if (response.data.data.length > 0 && !formData.planId && !tenant) {
-          setFormData((prev) => ({
-            ...prev,
-            planId: response.data.data[0]._id,
-          }));
-        }
       } catch (err) {
         console.error("Error fetching plans:", err);
       }
@@ -76,10 +72,13 @@ const NewTenantModal = ({
     if (isOpen) {
       fetchPlans();
     }
-  }, [isOpen, formData.planId, tenant]);
+  }, [isOpen]);
 
+  // Initialize form data when tenant changes or modal opens
   useEffect(() => {
-    if (isOpen && tenant) {
+    if (!isOpen) return;
+
+    if (tenant) {
       setFormData({
         condoName: tenant.name,
         condoAddress: tenant.address,
@@ -89,7 +88,7 @@ const NewTenantModal = ({
         adminPhone: tenant.admin.profile?.phone || "",
         planId: tenant.subscription?.plan._id || "",
       });
-    } else if (isOpen && !tenant) {
+    } else {
       // Reset form for create mode
       setFormData({
         condoName: "",
@@ -98,16 +97,30 @@ const NewTenantModal = ({
         adminName: "",
         adminLastName: "",
         adminPhone: "",
-        planId: plans.length > 0 ? plans[0]._id : "",
+        planId: "", // Will be set after plans load if empty
       });
     }
-  }, [isOpen, tenant, plans]);
+  }, [isOpen, tenant]);
+
+  // Set default plan if creating new and plans are loaded
+  useEffect(() => {
+    if (isOpen && !tenant && !formData.planId && plans.length > 0) {
+      setFormData((prev) => ({
+        ...prev,
+        planId: plans[0]._id,
+      }));
+    }
+  }, [plans, isOpen, tenant, formData.planId]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handlePlanChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, planId: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -259,26 +272,16 @@ const NewTenantModal = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Plan *
-            </label>
-            <select
-              name="planId"
+            <CustomSelect
+              label="Plan *"
               value={formData.planId}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-white"
-            >
-              {plans.length === 0 ? (
-                <option value="">No hay planes disponibles</option>
-              ) : (
-                plans.map((plan) => (
-                  <option key={plan._id} value={plan._id}>
-                    {plan.name} - ${plan.monthly_price}/mes
-                  </option>
-                ))
-              )}
-            </select>
+              onChange={handlePlanChange}
+              options={plans.map((plan) => ({
+                value: plan._id,
+                label: `${plan.name} - $${plan.monthly_price}/mes`,
+              }))}
+              placeholder="Seleccionar plan"
+            />
           </div>
 
           {/* Actions */}
