@@ -1,15 +1,16 @@
 import { useState, useEffect } from "react";
 import {
-  AlertTriangle,
   Plus,
   Pencil,
   Trash2,
   CheckCircle,
   XCircle,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import api from "../../services/api";
 import PlanModal from "../../components/admin/PlanModal";
+import SuperAdminModal from "../../components/admin/SuperAdminModal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 
 interface Plan {
@@ -23,21 +24,43 @@ interface Plan {
   ai_features_enabled: boolean;
 }
 
+interface SuperAdmin {
+  _id: string;
+  email: string;
+  profile: {
+    first_name: string;
+    last_name: string;
+    phone: string;
+  };
+}
+
 const SettingsPage = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [superAdmins, setSuperAdmins] = useState<SuperAdmin[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingAdmins, setLoadingAdmins] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
 
+  // SuperAdmin Modal state
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [selectedAdmin, setSelectedAdmin] = useState<SuperAdmin | null>(null);
+  const [isProcessingAdmin, setIsProcessingAdmin] = useState(false);
+
   // Confirm delete state
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [planToDelete, setPlanToDelete] = useState<string | null>(null);
 
+  // Confirm delete admin state
+  const [isAdminDeleteOpen, setIsAdminDeleteOpen] = useState(false);
+  const [adminToDelete, setAdminToDelete] = useState<string | null>(null);
+
   useEffect(() => {
     fetchPlans();
+    fetchSuperAdmins();
   }, []);
 
   const fetchPlans = async () => {
@@ -52,6 +75,21 @@ const SettingsPage = () => {
       toast.error("Error al cargar los planes");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSuperAdmins = async () => {
+    try {
+      setLoadingAdmins(true);
+      const response = await api.get<{ data: SuperAdmin[] }>(
+        "/admin/super-admins"
+      );
+      setSuperAdmins(response.data.data);
+    } catch (err) {
+      console.error("Error fetching superadmins:", err);
+      toast.error("Error al cargar superadmins");
+    } finally {
+      setLoadingAdmins(false);
     }
   };
 
@@ -88,6 +126,58 @@ const SettingsPage = () => {
     }
   };
 
+  // SuperAdmin handlers
+  const handleCreateAdmin = () => {
+    setSelectedAdmin(null);
+    setIsAdminModalOpen(true);
+  };
+
+  const handleEditAdmin = (admin: SuperAdmin) => {
+    setSelectedAdmin(admin);
+    setIsAdminModalOpen(true);
+  };
+
+  const confirmDeleteAdmin = (id: string) => {
+    setAdminToDelete(id);
+    setIsAdminDeleteOpen(true);
+  };
+
+  const handleAdminSuccess = async (data: any) => {
+    try {
+      setIsProcessingAdmin(true);
+      if (selectedAdmin) {
+        await api.put(`/admin/super-admins/${selectedAdmin._id}`, data);
+        toast.success("Superadmin actualizado");
+      } else {
+        await api.post("/admin/super-admins", data);
+        toast.success("Superadmin creado");
+      }
+      setIsAdminModalOpen(false);
+      fetchSuperAdmins();
+    } catch (err: unknown) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || "Error al guardar");
+    } finally {
+      setIsProcessingAdmin(false);
+    }
+  };
+
+  const handleDeleteAdmin = async () => {
+    if (!adminToDelete) return;
+
+    try {
+      await api.delete(`/admin/super-admins/${adminToDelete}`);
+      toast.success("Superadmin eliminado");
+      fetchSuperAdmins();
+    } catch (err: unknown) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || "Error al eliminar");
+    } finally {
+      setIsAdminDeleteOpen(false);
+      setAdminToDelete(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -99,6 +189,7 @@ const SettingsPage = () => {
         </p>
       </div>
 
+      {/* Plans Section */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex justify-between items-center">
           <div>
@@ -219,20 +310,101 @@ const SettingsPage = () => {
         </div>
       </div>
 
+      {/* SuperAdmins Section */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-slate-100">
-          <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-            <AlertTriangle className="text-amber-500" size={20} />
-            Zona de Peligro
-          </h2>
+        <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+              <ShieldCheck className="text-blue-600" size={20} />
+              Gestión de Superadmins
+            </h2>
+            <p className="text-sm text-slate-500">
+              Administra los usuarios con acceso total al sistema
+            </p>
+          </div>
+          <button
+            onClick={handleCreateAdmin}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-colors text-sm font-medium"
+          >
+            <Plus size={18} />
+            Nuevo Superadmin
+          </button>
         </div>
         <div className="p-6">
-          <p className="text-sm text-slate-600 mb-4">
-            Estas acciones pueden afectar la integridad del sistema.
-          </p>
-          <button className="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 text-sm font-medium transition-colors">
-            Reiniciar Caché del Sistema
-          </button>
+          {loadingAdmins ? (
+            <div className="text-center py-6 text-slate-500">
+              Cargando superadmins...
+            </div>
+          ) : superAdmins.length === 0 ? (
+            <div className="text-center py-6 text-slate-500">
+              No hay superadmins adicionales.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-slate-100">
+                    <th className="pb-3 text-sm font-semibold text-slate-600">
+                      Usuario
+                    </th>
+                    <th className="pb-3 text-sm font-semibold text-slate-600">
+                      Email
+                    </th>
+                    <th className="pb-3 text-sm font-semibold text-slate-600">
+                      Teléfono
+                    </th>
+                    <th className="pb-3 text-sm font-semibold text-slate-600 text-right">
+                      Acciones
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {superAdmins.map((admin) => (
+                    <tr key={admin._id} className="group">
+                      <td className="py-4 pr-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
+                            {admin.profile.first_name[0]}
+                            {admin.profile.last_name[0]}
+                          </div>
+                          <div>
+                            <div className="font-medium text-slate-800">
+                              {admin.profile.first_name}{" "}
+                              {admin.profile.last_name}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 pr-4 text-sm text-slate-600">
+                        {admin.email}
+                      </td>
+                      <td className="py-4 pr-4 text-sm text-slate-600">
+                        {admin.profile.phone || "-"}
+                      </td>
+                      <td className="py-4 text-right">
+                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => handleEditAdmin(admin)}
+                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Editar"
+                          >
+                            <Pencil size={16} />
+                          </button>
+                          <button
+                            onClick={() => confirmDeleteAdmin(admin._id)}
+                            className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Eliminar"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
@@ -246,6 +418,14 @@ const SettingsPage = () => {
         plan={selectedPlan}
       />
 
+      <SuperAdminModal
+        isOpen={isAdminModalOpen}
+        onClose={() => setIsAdminModalOpen(false)}
+        onSuccess={handleAdminSuccess}
+        superAdmin={selectedAdmin}
+        isProcessing={isProcessingAdmin}
+      />
+
       <ConfirmDialog
         isOpen={isDeleteOpen}
         title="Eliminar Plan"
@@ -255,6 +435,17 @@ const SettingsPage = () => {
         variant="danger"
         onConfirm={handleDeletePlan}
         onCancel={() => setIsDeleteOpen(false)}
+      />
+
+      <ConfirmDialog
+        isOpen={isAdminDeleteOpen}
+        title="Eliminar Superadmin"
+        message="¿Estás seguro de que deseas eliminar este superadmin? Esta acción no se puede deshacer."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        variant="danger"
+        onConfirm={handleDeleteAdmin}
+        onCancel={() => setIsAdminDeleteOpen(false)}
       />
     </div>
   );

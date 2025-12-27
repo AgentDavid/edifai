@@ -31,4 +31,30 @@ router.post("/plans", createPlan);
 router.put("/plans/:id", updatePlan);
 router.delete("/plans/:id", deletePlan);
 
+// Manage super admins
+router.get("/super-admins", (req, res, next) => {
+  // @ts-ignore
+  import("../controllers/adminController").then((c) =>
+    c.getSuperAdmins(req, res)
+  );
+});
+router.post("/super-admins", (req, res, next) => {
+  // @ts-ignore
+  import("../controllers/adminController").then((c) =>
+    c.createSuperAdmin(req, res)
+  );
+});
+router.put("/super-admins/:id", (req, res, next) => {
+  // @ts-ignore
+  import("../controllers/adminController").then((c) =>
+    c.updateSuperAdmin(req, res)
+  );
+});
+router.delete("/super-admins/:id", (req, res, next) => {
+  // @ts-ignore
+  import("../controllers/adminController").then((c) =>
+    c.deleteSuperAdmin(req, res)
+  );
+});
+
 export default router;

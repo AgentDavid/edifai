@@ -353,3 +353,169 @@ export const deletePlan = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Error al eliminar plan", error });
   }
 };
+
+/**
+ * GET /api/admin/super-admins
+ * List all super admins
+ */
+export const getSuperAdmins = async (req: Request, res: Response) => {
+  try {
+    const superAdmins = await User.find({ role: "super_admin" })
+      .select("-password_hash")
+      .lean();
+    res.json({ data: superAdmins });
+  } catch (error) {
+    console.error("Get SuperAdmins Error:", error);
+    res.status(500).json({ message: "Error al obtener superadmins", error });
+  }
+};
+
+const superAdminSchema = z.object({
+  email: z.string().email("Email inválido"),
+  firstName: z.string().min(1, "Nombre requerido"),
+  lastName: z.string().min(1, "Apellido requerido"),
+  phone: z.string().optional(),
+  password: z.string().min(6, "Contraseña debe tener al menos 6 caracteres"),
+});
+
+/**
+ * POST /api/admin/super-admins
+ * Create a new super admin
+ */
+export const createSuperAdmin = async (req: Request, res: Response) => {
+  try {
+    const parsed = superAdminSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Datos inválidos",
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    const { email, firstName, lastName, phone, password } = parsed.data;
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "El email ya está registrado" });
+    }
+
+    const passwordHash = await argon2.hash(password);
+
+    const superAdmin = await User.create({
+      email,
+      password_hash: passwordHash,
+      role: "super_admin",
+      profile: {
+        first_name: firstName,
+        last_name: lastName,
+        phone: phone || "",
+      },
+      status: "active",
+    });
+
+    // Remove password hash from response
+    const { password_hash, ...userWithoutPassword } = superAdmin.toObject();
+
+    res.status(201).json({
+      message: "Superadmin creado exitosamente",
+      data: userWithoutPassword,
+    });
+  } catch (error) {
+    console.error("Create SuperAdmin Error:", error);
+    res.status(500).json({ message: "Error al crear superadmin", error });
+  }
+};
+
+const updateSuperAdminSchema = z.object({
+  firstName: z.string().min(1, "Nombre requerido"),
+  lastName: z.string().min(1, "Apellido requerido"),
+  phone: z.string().optional(),
+  email: z.string().email("Email inválido"),
+  password: z
+    .string()
+    .min(6, "Contraseña debe tener al menos 6 caracteres")
+    .optional(),
+});
+
+/**
+ * PUT /api/admin/super-admins/:id
+ * Update a super admin
+ */
+export const updateSuperAdmin = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const parsed = updateSuperAdminSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Datos inválidos",
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    const { firstName, lastName, phone, email, password } = parsed.data;
+
+    // Check if email belongs to another user
+    const existingUser = await User.findOne({ email, _id: { $ne: id } });
+    if (existingUser) {
+      return res.status(400).json({ message: "El email ya está en uso" });
+    }
+
+    const updateData: any = {
+      email,
+      "profile.first_name": firstName,
+      "profile.last_name": lastName,
+      "profile.phone": phone || "",
+    };
+
+    if (password) {
+      updateData.password_hash = await argon2.hash(password);
+    }
+
+    const superAdmin = await User.findByIdAndUpdate(id, updateData, {
+      new: true,
+    }).select("-password_hash");
+
+    if (!superAdmin) {
+      return res.status(404).json({ message: "Superadmin no encontrado" });
+    }
+
+    res.json({ message: "Superadmin actualizado", data: superAdmin });
+  } catch (error) {
+    console.error("Update SuperAdmin Error:", error);
+    res.status(500).json({ message: "Error al actualizar superadmin", error });
+  }
+};
+
+/**
+ * DELETE /api/admin/super-admins/:id
+ * Delete a super admin
+ */
+export const deleteSuperAdmin = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Prevent self-deletion
+    // Assuming req.user is populated by auth middleware
+    const currentUserId = (req as any).user?.userId;
+    if (currentUserId === id) {
+      return res
+        .status(400)
+        .json({ message: "No puedes eliminar tu propia cuenta" });
+    }
+
+    const superAdmin = await User.findOneAndDelete({
+      _id: id,
+      role: "super_admin",
+    });
+
+    if (!superAdmin) {
+      return res.status(404).json({ message: "Superadmin no encontrado" });
+    }
+
+    res.json({ message: "Superadmin eliminado" });
+  } catch (error) {
+    console.error("Delete SuperAdmin Error:", error);
+    res.status(500).json({ message: "Error al eliminar superadmin", error });
+  }
+};
