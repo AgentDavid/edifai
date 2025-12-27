@@ -10,16 +10,38 @@ interface Plan {
   monthly_price: number;
 }
 
+interface Tenant {
+  _id: string;
+  name: string;
+  address: string;
+  admin: {
+    _id: string;
+    email: string;
+    profile?: {
+      first_name: string;
+      last_name: string;
+      phone: string;
+    };
+  };
+  subscription?: {
+    plan: {
+      _id: string;
+    };
+  } | null;
+}
+
 interface NewTenantModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  tenant?: Tenant | null;
 }
 
 const NewTenantModal = ({
   isOpen,
   onClose,
   onSuccess,
+  tenant,
 }: NewTenantModalProps) => {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(false);
@@ -40,7 +62,7 @@ const NewTenantModal = ({
       try {
         const response = await api.get<{ data: Plan[] }>("/admin/plans");
         setPlans(response.data.data);
-        if (response.data.data.length > 0 && !formData.planId) {
+        if (response.data.data.length > 0 && !formData.planId && !tenant) {
           setFormData((prev) => ({
             ...prev,
             planId: response.data.data[0]._id,
@@ -54,7 +76,32 @@ const NewTenantModal = ({
     if (isOpen) {
       fetchPlans();
     }
-  }, [isOpen, formData.planId]);
+  }, [isOpen, formData.planId, tenant]);
+
+  useEffect(() => {
+    if (isOpen && tenant) {
+      setFormData({
+        condoName: tenant.name,
+        condoAddress: tenant.address,
+        adminEmail: tenant.admin.email,
+        adminName: tenant.admin.profile?.first_name || "",
+        adminLastName: tenant.admin.profile?.last_name || "",
+        adminPhone: tenant.admin.profile?.phone || "",
+        planId: tenant.subscription?.plan._id || "",
+      });
+    } else if (isOpen && !tenant) {
+      // Reset form for create mode
+      setFormData({
+        condoName: "",
+        condoAddress: "",
+        adminEmail: "",
+        adminName: "",
+        adminLastName: "",
+        adminPhone: "",
+        planId: plans.length > 0 ? plans[0]._id : "",
+      });
+    }
+  }, [isOpen, tenant, plans]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -69,22 +116,20 @@ const NewTenantModal = ({
     setError(null);
 
     try {
-      await api.post("/admin/provision-tenant", formData);
-      setFormData({
-        condoName: "",
-        condoAddress: "",
-        adminEmail: "",
-        adminName: "",
-        adminLastName: "",
-        adminPhone: "",
-        planId: plans[0]?._id || "",
-      });
-      toast.success("Condominio creado exitosamente");
+      if (tenant) {
+        await api.put(`/admin/tenants/${tenant._id}`, formData);
+        toast.success("Condominio actualizado exitosamente");
+      } else {
+        await api.post("/admin/provision-tenant", formData);
+        toast.success("Condominio creado exitosamente");
+      }
+
       onSuccess();
     } catch (err: unknown) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       setError(
-        axiosError.response?.data?.message || "Error al crear el condominio"
+        axiosError.response?.data?.message ||
+          `Error al ${tenant ? "actualizar" : "crear"} el condominio`
       );
     } finally {
       setLoading(false);
@@ -106,7 +151,7 @@ const NewTenantModal = ({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
           <h2 className="text-xl font-semibold text-slate-800">
-            Nuevo Condominio
+            {tenant ? "Editar Condominio" : "Nuevo Condominio"}
           </h2>
           <button
             onClick={onClose}
@@ -250,7 +295,11 @@ const NewTenantModal = ({
               disabled={loading || plans.length === 0}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "Creando..." : "Crear Condominio"}
+              {loading
+                ? "Guardando..."
+                : tenant
+                  ? "Guardar Cambios"
+                  : "Crear Condominio"}
             </button>
           </div>
         </form>

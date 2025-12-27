@@ -422,7 +422,7 @@ const SettingsPage = () => {
         isOpen={isAdminModalOpen}
         onClose={() => setIsAdminModalOpen(false)}
         onSuccess={handleAdminSuccess}
-        superAdmin={selectedAdmin}
+        superAdmin={selectedAdmin || undefined}
         isProcessing={isProcessingAdmin}
       />
 

@@ -7,6 +7,9 @@ import User from "../models/User";
 import Condominium from "../models/Condominium";
 import SaaSPlan from "../models/SaaSPlan";
 import Subscription from "../models/Subscription";
+import Expense from "../models/Expense";
+import Unit from "../models/Unit";
+import Receipt from "../models/Receipt";
 import { sendWelcomeEmail } from "../services/emailService";
 
 // Validation schemas
@@ -30,9 +33,6 @@ function generateTempPassword(length = 12): string {
  * Create a new tenant (condominium) with admin user and subscription
  */
 export const provisionTenant = async (req: Request, res: Response) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     // Validate input
     const parsed = provisionTenantSchema.safeParse(req.body);
@@ -54,18 +54,14 @@ export const provisionTenant = async (req: Request, res: Response) => {
     } = parsed.data;
 
     // Check if email already exists
-    const existingUser = await User.findOne({ email: adminEmail }).session(
-      session
-    );
+    const existingUser = await User.findOne({ email: adminEmail });
     if (existingUser) {
-      await session.abortTransaction();
       return res.status(400).json({ message: "El email ya está registrado" });
     }
 
     // Validate plan exists
-    const plan = await SaaSPlan.findById(planId).session(session);
+    const plan = await SaaSPlan.findById(planId);
     if (!plan) {
-      await session.abortTransaction();
       return res.status(400).json({ message: "Plan no encontrado" });
     }
 
@@ -74,90 +70,72 @@ export const provisionTenant = async (req: Request, res: Response) => {
     const passwordHash = await argon2.hash(tempPassword);
 
     // 1. Create admin user
-    const adminUsers = await User.create(
-      [
-        {
-          email: adminEmail,
-          password_hash: passwordHash,
-          role: "admin_condominio",
-          profile: {
-            first_name: adminName,
-            last_name: adminLastName || "Admin",
-            phone: adminPhone || "N/A",
-          },
-          status: "active",
-        },
-      ],
-      { session }
-    );
-    const adminUser = adminUsers[0];
+    const adminUser = await User.create({
+      email: adminEmail,
+      password_hash: passwordHash,
+      role: "admin_condominio",
+      profile: {
+        first_name: adminName,
+        last_name: adminLastName || "Admin",
+        phone: adminPhone || "N/A",
+      },
+      status: "active",
+    });
+
     if (!adminUser) {
       throw new Error("Failed to create admin user");
     }
 
     // 2. Create condominium
-    const condominiums = await Condominium.create(
-      [
-        {
-          name: condoName,
-          address: condoAddress,
-          admin_id: adminUser._id,
-          settings: {
-            calculation_method: "equitativo",
-            currency: "USD",
-            notifications: {
-              enabled: true,
-              ai_chatbot_enabled: false,
-            },
-            communication_channels: {
-              whatsapp_enabled: false,
-              email_enabled: true,
-            },
-            ai_config: {
-              base_prompt: "Eres un asistente virtual para este condominio.",
-              knowledge_base: "",
-            },
-          },
-          amenities: [],
+    const condominium = await Condominium.create({
+      name: condoName,
+      address: condoAddress,
+      admin_id: adminUser._id,
+      settings: {
+        calculation_method: "equitativo",
+        currency: "USD",
+        notifications: {
+          enabled: true,
+          ai_chatbot_enabled: false,
         },
-      ],
-      { session }
-    );
-    const condominium = condominiums[0];
+        communication_channels: {
+          whatsapp_enabled: false,
+          email_enabled: true,
+        },
+        ai_config: {
+          base_prompt: "Eres un asistente virtual para este condominio.",
+          knowledge_base: "",
+        },
+      },
+      amenities: [],
+    });
+
     if (!condominium) {
+      // Rollback user creation
+      await User.findByIdAndDelete(adminUser._id);
       throw new Error("Failed to create condominium");
     }
 
     // 3. Update user with condominium_id (circular reference)
-    await User.findByIdAndUpdate(
-      adminUser._id,
-      { condominium_id: condominium._id },
-      { session }
-    );
+    await User.findByIdAndUpdate(adminUser._id, {
+      condominium_id: condominium._id,
+    });
 
     // 4. Create subscription
     const nextBillingDate = new Date();
     nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
 
-    await Subscription.create(
-      [
-        {
-          condominium_id: condominium._id,
-          plan_id: plan._id,
-          start_date: new Date(),
-          next_billing_date: nextBillingDate,
-          status: "active",
-          billing_cycle: "monthly",
-        },
-      ],
-      { session }
-    );
+    await Subscription.create({
+      condominium_id: condominium._id,
+      plan_id: plan._id,
+      start_date: new Date(),
+      next_billing_date: nextBillingDate,
+      status: "active",
+      billing_cycle: "monthly",
+    });
 
     // 5. Send welcome email
     await sendWelcomeEmail(adminEmail, condoName, tempPassword);
-
-    // Commit transaction
-    await session.commitTransaction();
 
     res.status(201).json({
       message: "Condominio creado exitosamente",
@@ -173,11 +151,8 @@ export const provisionTenant = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    await session.abortTransaction();
     console.error("Provision Tenant Error:", error);
     res.status(500).json({ message: "Error al crear el condominio", error });
-  } finally {
-    session.endSession();
   }
 };
 
@@ -241,6 +216,238 @@ export const getTenants = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Get Tenants Error:", error);
     res.status(500).json({ message: "Error al obtener condominios", error });
+  }
+};
+
+const updateTenantSchema = z.object({
+  condoName: z.string().min(1, "Nombre del condominio requerido"),
+  condoAddress: z.string().min(1, "Dirección requerida"),
+  adminEmail: z.string().email("Email inválido"),
+  adminName: z.string().min(1, "Nombre del administrador requerido"),
+  adminLastName: z.string().optional().default(""),
+  adminPhone: z.string().optional().default(""),
+  planId: z.string().min(1, "Plan requerido"),
+});
+
+/**
+ * PUT /api/admin/tenants/:id
+ * Update a tenant (condominium) and its admin user
+ */
+export const updateTenant = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const parsed = updateTenantSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: "Datos inválidos",
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    const {
+      condoName,
+      condoAddress,
+      adminEmail,
+      adminName,
+      adminLastName,
+      adminPhone,
+      planId,
+    } = parsed.data;
+
+    // 1. Find Condominium
+    const condominium = await Condominium.findById(id);
+    if (!condominium) {
+      return res.status(404).json({ message: "Condominio no encontrado" });
+    }
+
+    // 2. Find Admin User
+    const adminUser = await User.findById(condominium.admin_id);
+    if (!adminUser) {
+      return res
+        .status(404)
+        .json({ message: "Usuario administrador no encontrado" });
+    }
+
+    // 3. Check if new email is taken (if changed)
+    if (adminEmail !== adminUser.email) {
+      const emailExists = await User.findOne({
+        email: adminEmail,
+        _id: { $ne: adminUser._id },
+      });
+      if (emailExists) {
+        return res.status(400).json({ message: "El email ya está en uso" });
+      }
+    }
+
+    // 4. Update Condominium
+    condominium.name = condoName;
+    condominium.address = condoAddress;
+    await condominium.save();
+
+    // 5. Update Admin User
+    adminUser.email = adminEmail;
+    if (adminUser.profile) {
+      adminUser.profile.first_name = adminName;
+      adminUser.profile.last_name = adminLastName;
+      adminUser.profile.phone = adminPhone || "";
+    }
+    await adminUser.save();
+
+    // 6. Update Subscription (Plan) if changed
+    // Current active subscription
+    const currentSubscription = await Subscription.findOne({
+      condominium_id: condominium._id,
+      status: "active",
+    });
+
+    if (
+      currentSubscription &&
+      currentSubscription.plan_id.toString() !== planId
+    ) {
+      // Find new plan
+      const newPlan = await SaaSPlan.findById(planId);
+      if (!newPlan) {
+        return res.status(400).json({ message: "Plan no encontrado" });
+      }
+
+      currentSubscription.plan_id = newPlan._id;
+      await currentSubscription.save();
+    } else if (!currentSubscription) {
+      const newPlan = await SaaSPlan.findById(planId);
+      if (newPlan) {
+        const nextBillingDate = new Date();
+        nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
+
+        await Subscription.create({
+          condominium_id: condominium._id,
+          plan_id: newPlan._id,
+          start_date: new Date(),
+          next_billing_date: nextBillingDate,
+          status: "active",
+          billing_cycle: "monthly",
+        });
+      }
+    }
+
+    res.json({
+      message: "Condominio actualizado exitosamente",
+      data: {
+        condominium: {
+          _id: condominium._id,
+          name: condominium.name,
+        },
+        admin: {
+          _id: adminUser._id,
+          email: adminUser.email,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Update Tenant Error:", error);
+    res
+      .status(500)
+      .json({ message: "Error al actualizar el condominio", error });
+  }
+};
+
+/**
+ * DELETE /api/admin/tenants/:id
+ * Delete a tenant (condominium), its admin user, and subscription.
+ */
+export const deleteTenant = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // 1. Find Condominium
+    const condominium = await Condominium.findById(id);
+    if (!condominium) {
+      return res.status(404).json({ message: "Condominio no encontrado" });
+    }
+
+    // 2. Delete Subscription(s)
+    await Subscription.deleteMany({ condominium_id: id });
+
+    // 3. Delete Admin User
+    if (condominium.admin_id) {
+      await User.findByIdAndDelete(condominium.admin_id);
+    }
+
+    // 4. Delete Condominium
+    await Condominium.findByIdAndDelete(id);
+
+    // 5. Delete other related data
+    await Expense.deleteMany({ condominium_id: id });
+    await Unit.deleteMany({ condominium_id: id });
+    await Receipt.deleteMany({ condominium_id: id });
+
+    res.json({ message: "Condominio eliminado exitosamente" });
+  } catch (error) {
+    console.error("Delete Tenant Error:", error);
+    res.status(500).json({ message: "Error al eliminar el condominio", error });
+  }
+};
+
+/**
+ * PATCH /api/admin/tenants/:id/status
+ * Enable or disable a tenant (condominium) by updating the admin user and subscription status
+ */
+export const toggleTenantStatus = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { enabled } = req.body; // true to enable, false to disable
+
+    if (typeof enabled !== "boolean") {
+      return res
+        .status(400)
+        .json({ message: "Status 'enabled' (boolean) es requerido" });
+    }
+
+    const condominium = await Condominium.findById(id);
+    if (!condominium) {
+      return res.status(404).json({ message: "Condominio no encontrado" });
+    }
+
+    const adminUser = await User.findById(condominium.admin_id);
+    if (!adminUser) {
+      return res
+        .status(404)
+        .json({ message: "Usuario administrador no encontrado" });
+    }
+
+    const newStatus = enabled ? "active" : "inactive";
+
+    // Update Admin User Status
+    adminUser.status = enabled ? "active" : "blocked";
+    await adminUser.save();
+
+    // Update Subscription Status
+    // Note: This logic assumes one active subscription or finding the latest one.
+    // Simplifying to update any active/past_due/canceled to new status for this condo.
+    const subscriptions = await Subscription.find({ condominium_id: id });
+    for (const sub of subscriptions) {
+      if (enabled) {
+        // If enabling, only re-enable if it was inactive/canceled?
+        // Or just set to active.
+        sub.status = "active";
+      } else {
+        // If disabling, set to canceled or past_due? 'canceled' seems appropriate for a "Stop" action.
+        sub.status = "canceled";
+      }
+      await sub.save();
+    }
+
+    res.json({
+      message: `Condominio ${enabled ? "habilitado" : "deshabilitado"} exitosamente`,
+      data: {
+        adminStatus: adminUser.status,
+      },
+    });
+  } catch (error) {
+    console.error("Toggle Tenant Status Error:", error);
+    res
+      .status(500)
+      .json({ message: "Error al cambiar estado del condominio", error });
   }
 };
 

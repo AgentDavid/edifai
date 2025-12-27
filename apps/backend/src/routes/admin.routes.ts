@@ -22,6 +22,28 @@ router.post("/provision-tenant", provisionTenant);
 // List all tenants
 router.get("/tenants", getTenants);
 
+// Update/Delete tenant
+router.put("/tenants/:id", (req, res, next) => {
+  // @ts-ignore
+  import("../controllers/adminController").then((c) =>
+    c.updateTenant(req, res)
+  );
+});
+router.delete("/tenants/:id", (req, res, next) => {
+  // @ts-ignore
+  import("../controllers/adminController").then((c) =>
+    c.deleteTenant(req, res)
+  );
+});
+
+// Toggle tenant status
+router.patch("/tenants/:id/status", (req, res, next) => {
+  // @ts-ignore
+  import("../controllers/adminController").then((c) =>
+    c.toggleTenantStatus(req, res)
+  );
+});
+
 // List all plans (for dropdown)
 // List all plans (for dropdown)
 router.get("/plans", getPlans);
